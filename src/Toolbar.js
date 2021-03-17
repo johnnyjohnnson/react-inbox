@@ -1,7 +1,7 @@
 import React from 'react';
 
 
-const Toolbar = ( { selectAllState, unreadMsgCount, selectOrDeselectAll, changeReadStatus, deleteMessages } ) => {
+const Toolbar = ( { selectAllState, unreadMsgCount, selectOrDeselectAll, changeReadStatus, deleteMessages, labelHandler } ) => {
 
     let buttonAppearance = "";
     if (selectAllState === "checked") {
@@ -21,7 +21,7 @@ const Toolbar = ( { selectAllState, unreadMsgCount, selectOrDeselectAll, changeR
                 </p>
 
                 <button className="btn btn-default" onClick={selectOrDeselectAll}>
-                    de-/select All <i className={buttonAppearance}></i>
+                    <i className={buttonAppearance}></i>
                 </button>
 
                 <button className="btn btn-default markAsRead" onClick={changeReadStatus}>
@@ -32,22 +32,22 @@ const Toolbar = ( { selectAllState, unreadMsgCount, selectOrDeselectAll, changeR
                     Mark As Unread
                 </button>
 
-                <select className="form-control label-select">
+                <select className="form-control label-select apply" onChange={labelHandler}>
                     <option>Apply label</option>
                     <option value="dev">dev</option>
                     <option value="personal">personal</option>
                     <option value="gschool">gschool</option>
                 </select>
 
-                <select className="form-control label-select">
-                    <option>Remove label</option>
+                <select className="form-control label-select remove" onChange={labelHandler}>
+                    <option >Remove label</option>
                     <option value="dev">dev</option>
                     <option value="personal">personal</option>
                     <option value="gschool">gschool</option>
                 </select>
 
                 <button className="btn btn-default" onClick={deleteMessages}>
-                    delete <i className="fa fa-trash-o"></i>
+                    <i className="fa fa-trash-o"></i>
                 </button>
             </div>
         </div>

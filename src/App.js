@@ -17,15 +17,25 @@ class App extends React.Component {
   checkForSelectKey = () => {
     this.state.messages.forEach( (msg, index) => {
       if( typeof msg.selected === "undefined") {
-        let moddedMsg = this.modifyAttrInMessageObject(msg, "selected", false);
+        let moddedMsg = this.modifyAttrInMessageObject(msg, "selected", false, false);
         this.replaceObjectInMessageArray(index, moddedMsg);
       }
     })
   }
 
-  modifyAttrInMessageObject = (msg, key, value) => {
+  modifyAttrInMessageObject = (msg, key, value, erase) => {
+    if (key === "labels") {
+      let labelSet = new Set();
+      for (let lbl of msg.labels) labelSet.add(lbl);
+      if (erase) {
+        labelSet.delete(value);
+      } else {
+        labelSet.add(value);
+      }
+      value = [];
+      for (let lbl of labelSet.keys()) value.push(lbl);
+    }
     msg[key] = value;
-    console.log(msg);
     return msg;
   }
 
@@ -39,16 +49,13 @@ class App extends React.Component {
     if (this.state.selectState !== "checked") {
       // select all checkBoxes
       this.state.messages.forEach( (msg, index) => {
-        let moddedMsg = this.modifyAttrInMessageObject(msg, "selected", true);
-        // nicht optimal, weil jetzt für jede Message der "state" aktualisiert wird
-        // ändern dass es im batch abläuft
+        let moddedMsg = this.modifyAttrInMessageObject(msg, "selected", true, false);
         this.replaceObjectInMessageArray(index, moddedMsg);
       })
      } else {
        // deselect all checkBoxes
       this.state.messages.forEach( (msg, index) => {
-        let moddedMsg = this.modifyAttrInMessageObject(msg, "selected", false);
-        // auch hier wieder nicht optimal...
+        let moddedMsg = this.modifyAttrInMessageObject(msg, "selected", false, false);
         this.replaceObjectInMessageArray(index, moddedMsg);
       })
     }
@@ -63,27 +70,41 @@ class App extends React.Component {
     }
     this.state.messages.forEach( (msg, index) => {
       if(msg.selected) {
-        let moddedMsg = this.modifyAttrInMessageObject(msg, "read", marker);
-        // auch hier wieder nicht optimal...
+        let moddedMsg = this.modifyAttrInMessageObject(msg, "read", marker, false);
         this.replaceObjectInMessageArray(index, moddedMsg);
       }
     })
   }
 
-  deleteMessages = () => {
-    let remainingMessages = [];
+  labelHandler = (e) => {
+
+    if (e.target.value.endsWith("label")) {
+      return;
+    }
+
     this.state.messages.forEach( (msg, index) => {
-      if(!msg.selected) {
-        remainingMessages.push(msg);
+      if (msg.selected) {
+        let moddedMsg;
+        if (e.target.className.endsWith("apply")) {
+          moddedMsg = this.modifyAttrInMessageObject(msg, "labels", e.target.value, false);
+        } else if (e.target.className.endsWith("remove")) {
+          moddedMsg = this.modifyAttrInMessageObject(msg, "labels", e.target.value, true);
+        }
+        this.replaceObjectInMessageArray(index, moddedMsg);
       }
     })
-    this.setState({messages: remainingMessages});
+    
+  }
+
+  deleteMessages = () => {
+    let remainingMessages = this.state.messages.slice();
+    this.setState({messages: remainingMessages.filter(item => !item.selected)});
   }
 
   onChangeCheckBox = (e) => {
     this.state.messages.forEach( (msg, index) => {
       if(msg.id == e.target.id) {
-        let moddedMsg = this.modifyAttrInMessageObject(msg, "selected", !msg.selected);
+        let moddedMsg = this.modifyAttrInMessageObject(msg, "selected", !msg.selected, false);
         this.replaceObjectInMessageArray(index, moddedMsg);
       }
     })
@@ -92,7 +113,7 @@ class App extends React.Component {
   onStarClicked = (e) => {
     this.state.messages.forEach( (msg, index) => {
       if(msg.id == e.target.id) {
-        let moddedMsg = this.modifyAttrInMessageObject(msg, "starred", !msg.starred);
+        let moddedMsg = this.modifyAttrInMessageObject(msg, "starred", !msg.starred, false);
         this.replaceObjectInMessageArray(index, moddedMsg);
       }
     })
@@ -100,7 +121,7 @@ class App extends React.Component {
 
   static getDerivedStateFromProps(props, state) {
 
-    let selectedCount = state.messages.filter( msg => msg.selected === true ).length;
+    let selectedCount = state.messages.filter( msg => msg.selected ).length;
     
     if (selectedCount === 0) {
       return { selectState: "unchecked" }
@@ -113,11 +134,11 @@ class App extends React.Component {
 
   render() {
 
-    const unreadMsgCount = this.state.messages.filter( msg => msg.read === false ).length;
+    const unreadMsgCount = this.state.messages.filter( msg => !msg.read ).length;
 
     return (
       <div className="App">
-        <Toolbar selectAllState={this.state.selectState} unreadMsgCount={unreadMsgCount} selectOrDeselectAll={this.selectAll} changeReadStatus={this.changeReadStatus} deleteMessages={this.deleteMessages}/>
+        <Toolbar selectAllState={this.state.selectState} unreadMsgCount={unreadMsgCount} selectOrDeselectAll={this.selectAll} changeReadStatus={this.changeReadStatus} deleteMessages={this.deleteMessages} labelHandler={this.labelHandler}/>
         <MessageList arrayOfMessages={this.state.messages} checkBoxMethod={this.onChangeCheckBox} starMethod={this.onStarClicked}/>
       </div>
     );
