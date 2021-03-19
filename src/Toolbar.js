@@ -1,7 +1,7 @@
 import React from 'react';
 
 
-const Toolbar = ( { selectAllState, unreadMsgCount, selectOrDeselectAll, changeReadStatus, deleteMessages, labelHandler } ) => {
+const Toolbar = ( { toggleComposeForm, selectAllState, unreadMsgCount, selectOrDeselectAll, changeReadStatus, deleteMessages, labelHandler } ) => {
 
     let buttonAppearance = "";
     if (selectAllState === "checked") {
@@ -19,6 +19,10 @@ const Toolbar = ( { selectAllState, unreadMsgCount, selectOrDeselectAll, changeR
                     <span className="badge badge">{unreadMsgCount}</span>
                     unread messages
                 </p>
+
+                <button className="btn btn-danger" onClick={toggleComposeForm}>
+                    <i className="fa fa-plus"></i>
+                </button>
 
                 <button className="btn btn-default" onClick={selectOrDeselectAll}>
                     <i className={buttonAppearance}></i>
