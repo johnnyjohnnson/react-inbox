@@ -10,10 +10,10 @@ const Message = ({id, message, checkBoxMethod, starMethod}) => {
         <div className="col-xs-1">
             <div className="row">
                 <div className="col-xs-2">
-                    <input id={id} type="checkbox" checked={message.selected} onChange={checkBoxMethod}/>
+                    <input id={id} type="checkbox" checked={message.selected} onChange={() => checkBoxMethod(message.id)}/>
                 </div>
                 <div className="col-xs-2">
-                    <i  id={id} className={`star fa ${message.starred ? "fa-star" : "fa-star-o"}`} onClick={starMethod}></i>
+                    <i  id={id} className={`star fa ${message.starred ? "fa-star" : "fa-star-o"}`} onClick={() => starMethod(message.id)}></i>
                 </div>
             </div>
         </div>

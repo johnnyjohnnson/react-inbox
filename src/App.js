@@ -19,20 +19,28 @@ class App extends React.Component {
     };
   }
 
+  fetchDataFromServer = async() => {
+    const responseMessages = await fetch(URL);
+    const messagesJson = await responseMessages.json();
+    this.setState({messages: messagesJson.map( msg => Object.assign(msg, {selected: false}))});
+  }
+
   updateMessageOnServer = async( msg ) => {
-    await fetch(URL,
+    const resp = await fetch(URL,
       {
         method: "PATCH",
-        body: JSON.stringify({ ...msg, messageIds: [msg.id] }),
+        body: JSON.stringify(msg),
         headers: {
           "Content-type": "application/json"
         }
       }
     )
+    const messages = await resp.json();
+    this.setState({messages: messages.map( msg => Object.assign(msg, {selected: false}))});
   }
 
   uploadMessageToServer = async( msg ) => {
-    await fetch(URL,
+    const resp = await fetch(URL,
       {
         method: 'POST',
         body: JSON.stringify( msg ),
@@ -41,141 +49,53 @@ class App extends React.Component {
         }
       }
     )
-  }
-
-  modifyAttrInMessageObject = (msg, key, value, erase) => {
-    if (key === "labels") {
-      let labelSet = new Set();
-      for (let lbl of msg.labels) labelSet.add(lbl);
-      if (erase) {
-        labelSet.delete(value);
-      } else {
-        labelSet.add(value);
-      }
-      value = [];
-      for (let lbl of labelSet.keys()) value.push(lbl);
-    }
-    msg[key] = value;
-    return msg;
-  }
-
-  replaceObjectInMessageArray = (index, msg) => {
-    if(msg.command !== "select") this.updateMessageOnServer(msg);
-    let copyOfMessageArray = [...this.state.messages];
-    copyOfMessageArray[index] = msg;
-    this.setState({messages: copyOfMessageArray});
+    const respMsg = await resp.json();
+    this.setState({messages: this.state.messages.concat(respMsg)});
   }
 
   toggleComposeForm = () => {
     this.setState({compFormVisible: !this.state.compFormVisible});
   }
 
-  addNewMessageToState = ( msg ) => {
-    this.setState({
-      messages: this.state.messages.concat({
-        subject: msg.subject,
-        read: true,
-        starred: false,
-        labels: [],
-        body: msg.message,
-        id: this.state.messages.length + 1
-      })
-    })
-  }
-
   sendMessage = ( compStateObj ) => {
     this.toggleComposeForm();
-    this.addNewMessageToState(compStateObj);
     this.uploadMessageToServer(compStateObj);
   }
 
   selectAll = () => {
+    let copyMessages = this.state.messages.slice();
     if (this.state.selectState !== "checked") {
-      this.state.messages.forEach( (msg, index) => {
-        let moddedMsg = this.modifyAttrInMessageObject(msg, "selected", true, false);
-        moddedMsg = this.modifyAttrInMessageObject(msg, "command", "select", false);
-        this.replaceObjectInMessageArray(index, moddedMsg);
-      })
-     } else {
-      this.state.messages.forEach( (msg, index) => {
-        let moddedMsg = this.modifyAttrInMessageObject(msg, "selected", false, false);
-        moddedMsg = this.modifyAttrInMessageObject(msg, "command", "select", false);
-        this.replaceObjectInMessageArray(index, moddedMsg);
-      })
+      copyMessages.forEach( msg => msg.selected = true );
+    } else {
+      copyMessages.forEach( msg => msg.selected = false );
     }
+    this.setState({messages: copyMessages});
   }
 
-  changeReadStatus = (e) => {
-    let marker;
-    if (e.target.className.endsWith("markAsRead")) {
-      marker = true;
-    } else if (e.target.className.endsWith("markAsUnread")) {
-      marker = false;
-    }
-    this.state.messages.forEach( (msg, index) => {
-      if(msg.selected) {
-        let moddedMsg = this.modifyAttrInMessageObject(msg, "read", marker, false);
-        moddedMsg = this.modifyAttrInMessageObject(msg, "command", "read", false);
-        this.replaceObjectInMessageArray(index, moddedMsg);
-      }
-    })
+  getSelectedMessageIds = () => {return this.state.messages.filter(msg => msg.selected).map(msg => msg.id)};
+  
+  changeReadStatus = (read) => this.updateMessageOnServer(
+    {messageIds: this.getSelectedMessageIds(), command: "read", read})
+
+  labelHandler = (command, label) => {
+    if (label.endsWith("label")) return;
+    this.updateMessageOnServer({messageIds: this.getSelectedMessageIds(), command, label});
   }
 
-  labelHandler = (e) => {
+  deleteMessages = () => this.updateMessageOnServer({messageIds: this.getSelectedMessageIds(), command: "delete"});
 
-    if (e.target.value.endsWith("label")) {
-      return;
-    }
+  onStarClicked = (id) => this.updateMessageOnServer({messageIds: [id], command: "star"})
 
-    this.state.messages.forEach( (msg, index) => {
-      if (msg.selected) {
-        let moddedMsg = this.modifyAttrInMessageObject(msg, "label", e.target.value, false);
-        if (e.target.className.endsWith("apply")) {
-          moddedMsg = this.modifyAttrInMessageObject(msg, "labels", e.target.value, false);
-          moddedMsg = this.modifyAttrInMessageObject(msg, "command", "addLabel", false);
-        } else if (e.target.className.endsWith("remove")) {
-          moddedMsg = this.modifyAttrInMessageObject(msg, "labels", e.target.value, true);
-          moddedMsg = this.modifyAttrInMessageObject(msg, "command", "removeLabel", false);
-        }
-        this.replaceObjectInMessageArray(index, moddedMsg);
-      }
+  onChangeCheckBox = (id) => {
+    let messages = this.state.messages.map( msg => {
+      if (msg.id === id) msg.selected = !msg.selected;
+      return msg;
     })
-  }
-
-  deleteMessages = () => {
-    this.state.messages.forEach(msg => {
-      if (msg.selected) {
-        let moddedMsg = this.modifyAttrInMessageObject(msg, "command", "delete", false);
-        this.updateMessageOnServer(moddedMsg);
-      }
-    })
-    this.setState({messages: this.state.messages.filter(item => !item.selected)});
-  }
-
-  onChangeCheckBox = (e) => {
-    this.state.messages.forEach( (msg, index) => {
-      if(msg.id == e.target.id) {
-        let moddedMsg = this.modifyAttrInMessageObject(msg, "selected", !msg.selected, false);
-        moddedMsg = this.modifyAttrInMessageObject(msg, "command", "select", false);
-        this.replaceObjectInMessageArray(index, moddedMsg);
-      }
-    })
-  }
-
-  onStarClicked = (e) => {
-    this.state.messages.forEach( (msg, index) => {
-      if(msg.id == e.target.id) {
-        let moddedMsg = this.modifyAttrInMessageObject(msg, "starred", !msg.starred, false);
-        moddedMsg = this.modifyAttrInMessageObject(msg, "command", "star", false);
-        this.replaceObjectInMessageArray(index, moddedMsg);
-      }
-    })
+    this.setState({messages});
   }
 
   static getDerivedStateFromProps(props, state) {
-
     let selectedCount = state.messages.filter( msg => msg.selected ).length;
-    
     if (selectedCount === 0) {
       return { selectState: "unchecked" }
     } else if (selectedCount === state.messages.length) {
@@ -186,9 +106,7 @@ class App extends React.Component {
   }
 
   async componentDidMount() {
-    const responseMessages = await fetch(URL);
-    const messagesJson = await responseMessages.json();
-    this.setState({messages: messagesJson.map( msg => Object.assign(msg, {selected: false} ) )})
+    this.fetchDataFromServer();
   }
 
   render() {
